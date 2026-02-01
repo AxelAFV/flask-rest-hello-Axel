@@ -4,11 +4,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 db = SQLAlchemy()
 
-followers = Table(
+follower_table = Table(
     "follower_table",
     db.metadata,
-    Column("user_id", ForeignKey("user.id"), primary_key=True),
-    Column("follower_id", ForeignKey("follower.id"), primary_key=True),
+    Column("follower_id", ForeignKey("user.id"), primary_key=True),
+    Column("followed_id", ForeignKey("user.id"), primary_key=True),
 )
 
 class User(db.Model):
@@ -17,9 +17,11 @@ class User(db.Model):
     firstname: Mapped[str] = mapped_column(String(120), nullable=True)
     lastname: Mapped[str] = mapped_column(String(120), nullable=True)
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+
     post: Mapped[list["Post"]]=relationship()
     comment: Mapped[list["Comment"]]=relationship()
-    followed: Mapped[list["Follower"]]= relationship("Follower", secondary= followers, back_populates= "followed_by")
+    following: Mapped[list["User"]]= relationship("User", secondary= follower_table, primaryjoin=(follower_table.c.follower_id == id), secondaryjoin=(follower_table.c.followed_id == id), back_populates= "followers")
+    followers: Mapped[list["User"]]= relationship("User", secondary= follower_table, primaryjoin=(follower_table.c.followed_id == id), secondaryjoin=(follower_table.c.follower_id == id), back_populates= "following")
 
     def serialize(self):
         return {
@@ -29,11 +31,7 @@ class User(db.Model):
             "lastname": self.lastname,
             "email": self.email,
         }
-       
-class Follower(db.Model):
-    id: Mapped[int] = mapped_column(primary_key=True)
-    followed_by: Mapped[list[User]]= relationship("User", secondary= followers, back_populates= "followed")
-
+    
 class Post(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     author_id: Mapped[int]= mapped_column(ForeignKey(User.id))
